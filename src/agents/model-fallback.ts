@@ -498,6 +498,29 @@ export async function runWithModelFallback<T>(params: {
     }
   }
 
+  // Last resort fallback: try minimax if not already attempted
+  const hasMinimax = attempts.some(
+    (a) => a.provider === "minimax" && a.model === "MiniMax-M2.5-highspeed"
+  );
+  if (!hasMinimax) {
+    try {
+      const result = await params.run("minimax", "MiniMax-M2.5-highspeed");
+      return {
+        result,
+        provider: "minimax",
+        model: "MiniMax-M2.5-highspeed",
+        attempts,
+      };
+    } catch (lastResortError) {
+      attempts.push({
+        provider: "minimax",
+        model: "MiniMax-M2.5-highspeed",
+        error: lastResortError instanceof Error ? lastResortError.message : String(lastResortError),
+        reason: "last_resort_fallback_failed",
+      });
+    }
+  }
+
   throwFallbackFailureSummary({
     attempts,
     candidates,
